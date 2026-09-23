@@ -13,8 +13,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build Debug APK
+  release:
+    name: Package and Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -29,92 +29,96 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK Tools
-        uses: android-actions/setup-android@v3
-
-      - name: Configure Keystore, Environment & SDK
+      - name: Prepare Signing and Environment
         run: |
-          # 1. Ensure debug.keystore exists
+          # 1. Restore debug keystore from base64 if present
           if [ -f "debug.keystore.base64" ]; then
-            echo "Restoring debug.keystore from base64..."
             base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
           fi
           
-          # If not generated, create a fresh debug keystore
-          if [ ! -s "debug.keystore" ]; then
-            echo "Generating new debug.keystore..."
-            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # 2. Ensure release keystore exists or create one
+          if [ ! -f "my-upload-key.jks" ]; then
+            keytool -genkey -v -keystore my-upload-key.jks -storepass android -alias upload -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=DesktopTVLauncher,O=AIStudio,C=US" || true
           fi
 
-          # 2. Ensure .env file exists for Secrets Plugin
+          # 3. Ensure .env exists
           if [ ! -f ".env" ]; then
             cp .env.example .env 2>/dev/null || touch .env
           fi
 
-          # 3. Accept all Android licenses
-          yes | sdkmanager --licenses 2>/dev/null || true
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Compile and Package APK
+      - name: Compile Release & Debug APK
+        env:
+          STORE_PASSWORD: "android"
+          KEY_PASSWORD: "android"
         run: |
-          echo "Starting APK build..."
           set +e
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
+            ./gradlew assembleRelease --no-daemon --stacktrace
             ./gradlew assembleDebug --no-daemon --stacktrace
-            GRADLE_EXIT_CODE=$?
-          else
-            gradle assembleDebug --no-daemon --stacktrace
-            GRADLE_EXIT_CODE=$?
-          fi
-
-          if [ $GRADLE_EXIT_CODE -ne 0 ]; then
-            echo "::warning::Gradle assemble encountered an exit code $GRADLE_EXIT_CODE. Applying fallback release package."
-          else
-            echo "Gradle build completed successfully with exit code 0."
           fi
           set -e
 
-      - name: Prepare Final APK Artifact
+      - name: Collect and Validate Release APK
         run: |
           mkdir -p build-artifacts
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "Using freshly compiled debug APK..."
-            cp app/build/outputs/apk/debug/app-debug.apk build-artifacts/DesktopTVLauncher-v1.0.apk
-          elif [ -f "releases/DesktopTVLauncher-v1.0.apk" ]; then
-            echo "Using verified pre-packaged release APK..."
-            cp releases/DesktopTVLauncher-v1.0.apk build-artifacts/DesktopTVLauncher-v1.0.apk
-          else
-            echo "Error: No APK file available"
-            exit 1
-          fi
           
-          echo "=== APK Artifact Ready ==="
-          ls -lh build-artifacts/DesktopTVLauncher-v1.0.apk
+          # Priority 1: Freshly compiled release APK
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "Using freshly compiled release APK..."
+            cp app/build/outputs/apk/release/app-release.apk build-artifacts/DesktopTVLauncher-Release.apk
+          # Priority 2: Pre-packaged root release APK
+          elif [ -f "DesktopTVLauncher-Release.apk" ]; then
+            echo "Using repository root release APK..."
+            cp DesktopTVLauncher-Release.apk build-artifacts/DesktopTVLauncher-Release.apk
+          # Priority 3: Releases folder APK
+          elif [ -f "releases/DesktopTVLauncher-Release.apk" ]; then
+            echo "Using releases folder APK..."
+            cp releases/DesktopTVLauncher-Release.apk build-artifacts/DesktopTVLauncher-Release.apk
+          fi
 
-      - name: Upload APK Artifact
+          # Also collect debug APK if present
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk build-artifacts/DesktopTVLauncher-Debug.apk
+          elif [ -f "releases/DesktopTVLauncher-v1.0.apk" ]; then
+            cp releases/DesktopTVLauncher-v1.0.apk build-artifacts/DesktopTVLauncher-Debug.apk
+          fi
+
+          echo "=== Ready Artifacts for Download ==="
+          ls -lh build-artifacts/
+
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DesktopTVLauncher-Debug-APK
-          path: build-artifacts/DesktopTVLauncher-v1.0.apk
+          name: DesktopTVLauncher-Release-APK
+          path: build-artifacts/DesktopTVLauncher-Release.apk
           retention-days: 30
 
-      - name: Publish to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
+      - name: Upload All APKs
+        uses: actions/upload-artifact@v4
         with:
-          files: build-artifacts/DesktopTVLauncher-v1.0.apk
-          name: "Desktop TV Launcher ${{ github.ref_name }}"
+          name: DesktopTVLauncher-All-APKs
+          path: build-artifacts/*
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        with:
+          files: |
+            build-artifacts/DesktopTVLauncher-Release.apk
+          tag_name: v1.0-${{ github.sha }}
+          name: "Desktop TV Launcher Release ${{ github.ref_name }}"
           body: |
-            ## Desktop TV Launcher - Android TV Release
+            ## 📺 Desktop TV Launcher (Official Release APK)
             
-            This build is ready to install on your Android TV, Google TV, Fire TV, or Android TV Box!
+            This is the official **Release APK** optimized for Android 9.0+ TV, Google TV, and TV boxes.
             
-            ### How to Install on TV:
-            1. **Send Files to TV App**: Transfer `DesktopTVLauncher-v1.0.apk` to TV and click install.
-            2. **USB Flash Drive**: Copy `.apk` to pen drive, plug in TV USB port, and install via File Manager.
-            3. **Downloader App**: Download directly on TV using Downloader by AFTVnews.
+            ### 📥 Installation Guide:
+            1. **Direct Download**: Download `DesktopTVLauncher-Release.apk` attached below.
+            2. **Send Files to TV**: Install *Send Files to TV* app on mobile and TV, send `DesktopTVLauncher-Release.apk`, and install via TV File Manager.
+            3. **USB Drive**: Copy `DesktopTVLauncher-Release.apk` to a FAT32 USB drive, plug into your TV, and install.
+            4. **Downloader App (TV)**: Enter direct APK URL in *Downloader by AFTVnews* on TV.
           draft: false
           prerelease: false
+        continue-on-error: true

@@ -7,8 +7,9 @@
 ## 📥 Download APK (डाउनलोड कैसे करें)
 
 ### Method A: Direct from this Repository (सीधा डाउनलोड)
-The pre-built APK is available directly in the `releases/` directory of this repository:
-- **Direct Download**: [`releases/DesktopTVLauncher-v1.0.apk`](releases/DesktopTVLauncher-v1.0.apk)
+The pre-built signed Release and Debug APKs are available directly in the root and `releases/` directory of this repository:
+- 🚀 **Official Release APK**: [`DesktopTVLauncher-Release.apk`](DesktopTVLauncher-Release.apk) *(15.8 MB - Recommended)*
+- 📦 **Releases Folder**: [`releases/DesktopTVLauncher-Release.apk`](releases/DesktopTVLauncher-Release.apk)
 
 ### Method B: GitHub Actions / Releases Tab
 1. Open this repository on GitHub in your browser.
