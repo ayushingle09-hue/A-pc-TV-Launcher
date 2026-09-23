@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- Background Gradient -->
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="320"
+                android:endY="180"
+                android:type="linear">
+                <item android:color="#0F172A" android:offset="0.0" />
+                <item android:color="#1E293B" android:offset="0.6" />
+                <item android:color="#0369A1" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Grid Accents -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#2038BDF8"
+        android:strokeWidth="1"
+        android:pathData="M0,60 L320,60 M0,120 L320,120 M80,0 L80,180 M160,0 L160,180 M240,0 L240,180" />
+    <!-- Mini Desktop Monitor Silhouette -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M60,40 h70 a4,4 0 0,1 4,4 v46 a4,4 0 0,1 -4,4 h-70 a4,4 0 0,1 -4,-4 v-46 a4,4 0 0,1 4,-4 z" />
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M64,44 h62 v38 h-62 z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M90,94 h10 v8 h-10 z M82,102 h26 v3 h-26 z" />
+    <!-- Mouse cursor on banner -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M100,64 l14,14 l-5,2 l4,8 l-4,2 l-4,-8 l-5,5 z" />
+</vector>

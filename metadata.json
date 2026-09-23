@@ -1,0 +1,6 @@
+{
+  "name": "Desktop TV Launcher",
+  "description": "PC-style desktop launcher for Android TV with mouse-first navigation, windowing system, and custom taskbar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

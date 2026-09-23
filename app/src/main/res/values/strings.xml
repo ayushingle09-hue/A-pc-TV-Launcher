@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Desktop TV Launcher</string>
+    <string name="mouse_required_title">Mouse Required</string>
+    <string name="mouse_required_message">Please connect a USB/Bluetooth Mouse to continue.\nThis desktop TV interface is optimized strictly for mouse navigation.</string>
+    <string name="bypass_mouse_check">Bypass Check (Emulator / Testing Mode)</string>
+    <string name="start">Start</string>
+    <string name="search_apps">Search apps or commands...</string>
+    <string name="pinned_apps">Pinned Apps</string>
+    <string name="all_apps">All Applications</string>
+    <string name="system_monitor">Task Manager</string>
+    <string name="file_explorer">File Explorer</string>
+    <string name="quick_notes">Notes</string>
+    <string name="tv_settings">Display &amp; Settings</string>
+    <string name="terminal">Terminal</string>
+</resources>
