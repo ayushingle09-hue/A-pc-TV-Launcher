@@ -76,13 +76,13 @@ fun DesktopIconView(
         label = "iconScale"
     )
 
-    // Convert Android Drawable to Compose ImageBitmap safely
-    val imageBitmap = remember(app.icon) {
+    // Direct pre-cached ImageBitmap from background thread
+    val imageBitmap = app.iconBitmap ?: remember(app.icon) {
         app.icon?.let { d ->
             try {
                 val w = d.intrinsicWidth.takeIf { it > 0 } ?: 96
                 val h = d.intrinsicHeight.takeIf { it > 0 } ?: 96
-                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                val bmp = Bitmap.createBitmap(w.coerceIn(48, 96), h.coerceIn(48, 96), Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp)
                 d.setBounds(0, 0, canvas.width, canvas.height)
                 d.draw(canvas)
@@ -144,10 +144,8 @@ fun DesktopIconView(
                 modifier = Modifier
                     .size(54.dp)
                     .shadow(
-                        elevation = if (isHovered) 10.dp else 2.dp,
-                        shape = RoundedCornerShape(14.dp),
-                        ambientColor = if (isHovered) CyanGlow else Color.Black,
-                        spotColor = if (isHovered) CyanBright else Color.Black
+                        elevation = if (isHovered) 6.dp else 1.dp,
+                        shape = RoundedCornerShape(14.dp)
                     )
                     .background(Slate800.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
                     .border(

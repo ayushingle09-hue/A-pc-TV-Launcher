@@ -1,0 +1,81 @@
+name: Build & Release TV Launcher APK
+
+on:
+  push:
+    branches: [ "**" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Debug APK
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            gradle assembleDebug --stacktrace
+          fi
+
+      - name: Rename APK for Easy Download
+        run: |
+          mkdir -p build-artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk build-artifacts/DesktopTVLauncher-v1.0-debug.apk
+          echo "APK generated successfully:"
+          ls -lh build-artifacts/
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopTVLauncher-Debug-APK
+          path: build-artifacts/DesktopTVLauncher-v1.0-debug.apk
+          retention-days: 30
+
+      - name: Release APK (on tag push or manual release)
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-artifacts/DesktopTVLauncher-v1.0-debug.apk
+          name: "Desktop TV Launcher ${{ github.ref_name }}"
+          body: |
+            ## Desktop TV Launcher - Android TV & Google TV Release
+            
+            This debug build is ready to install on your Android TV, Google TV, Fire TV, or TV Box!
+            
+            ### How to install on your TV:
+            1. **Download APK**: Download `DesktopTVLauncher-v1.0-debug.apk` to your phone, PC, or directly to your TV.
+            2. **Downloader App (Direct on TV)**: Install **Downloader by AFTVnews** from the Google Play Store on your TV, enter the download URL, and install.
+            3. **Send Files to TV**: Install **Send Files to TV** on both your phone and TV to transfer the APK, then open with a file manager (like FX or Solid Explorer) to install.
+            4. **USB Drive**: Copy the `.apk` file to a FAT32/exFAT USB flash drive, plug it into your TV, open any File Manager on TV, and click Install.
+            5. **ADB (Wireless)**:
+               ```bash
+               adb connect <TV_IP_ADDRESS>
+               adb install -r DesktopTVLauncher-v1.0-debug.apk
+               ```
+          draft: false
+          prerelease: false

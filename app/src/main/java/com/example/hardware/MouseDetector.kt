@@ -63,10 +63,16 @@ class MouseDetector(private val context: Context) : InputManager.InputDeviceList
 
             if (hasMouseSource || hasTouchpadSource || hasTrackballSource) {
                 // If the device has mouse capability and is external or physical
+                val isExternalDevice = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    device.isExternal
+                } else {
+                    !device.isVirtual
+                }
+
                 val info = ConnectedMouseInfo(
                     id = device.id,
                     name = device.name,
-                    isExternal = device.isExternal,
+                    isExternal = isExternalDevice,
                     hasRelativeMotion = hasMouseSource
                 )
                 mouseList.add(info)

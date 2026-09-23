@@ -10,6 +10,11 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.Settings
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hardware.MouseDetector
@@ -217,6 +222,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
                 val label = resolveInfo.loadLabel(pm).toString()
                 val icon = resolveInfo.loadIcon(pm)
+                val iconBmp = drawableToImageBitmap(icon)
                 val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and
                         android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
@@ -225,6 +231,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     packageName = pName,
                     activityName = resolveInfo.activityInfo.name,
                     icon = icon,
+                    iconBitmap = iconBmp,
                     isSystemApp = isSystem
                 )
             }.sortedBy { it.label.lowercase(Locale.ROOT) }
@@ -232,6 +239,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             withContext(Dispatchers.Main) {
                 _installedApps.value = appList
             }
+        }
+    }
+
+    private fun drawableToImageBitmap(drawable: Drawable?): ImageBitmap? {
+        if (drawable == null) return null
+        return try {
+            val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
+            val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
+            val targetW = w.coerceIn(48, 96)
+            val targetH = h.coerceIn(48, 96)
+            val bmp = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bmp.asImageBitmap()
+        } catch (_: Throwable) {
+            null
         }
     }
 
@@ -513,17 +537,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val dateFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
 
         viewModelScope.launch(Dispatchers.Default) {
+            var counter = 0
             while (true) {
                 val now = Date()
-                _currentTime.value = timeFormat.format(now)
-                _currentDate.value = dateFormat.format(now)
+                val newTime = timeFormat.format(now)
+                if (_currentTime.value != newTime) {
+                    _currentTime.value = newTime
+                }
+                val newDate = dateFormat.format(now)
+                if (_currentDate.value != newDate) {
+                    _currentDate.value = newDate
+                }
 
-                // Network
-                checkNetwork()
+                // Poll network and system metrics every 5 seconds to reduce CPU churn on Android 9 TV
+                if (counter % 5 == 0) {
+                    checkNetwork()
+                    checkSystemMetrics()
+                }
 
-                // RAM & System metrics
-                checkSystemMetrics()
-
+                counter++
                 delay(1000)
             }
         }

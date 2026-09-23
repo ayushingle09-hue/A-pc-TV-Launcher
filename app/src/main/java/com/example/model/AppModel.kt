@@ -2,15 +2,18 @@ package com.example.model
 
 import android.graphics.drawable.Drawable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 
 /**
  * Represents an installed Android application discovered via PackageManager.
+ * Includes cached ImageBitmap for zero-allocation rendering on low-end TV chipsets (Android 9+).
  */
 data class AppInfo(
     val label: String,
     val packageName: String,
     val activityName: String,
     val icon: Drawable? = null,
+    val iconBitmap: ImageBitmap? = null,
     val isSystemApp: Boolean = false,
     val isPinned: Boolean = false
 )

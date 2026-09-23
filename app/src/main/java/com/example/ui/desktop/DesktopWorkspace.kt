@@ -3,6 +3,7 @@ package com.example.ui.desktop
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,41 +91,43 @@ fun DesktopWorkspace(
             .testTag("desktop_workspace")
     ) {
         // ==========================================
-        // DESKTOP WALLPAPER & CANVAS
+        // DESKTOP WALLPAPER & CANVAS (Cached Drawing for 60FPS on Android 9 TV)
         // ==========================================
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            // Gradient fill
-            drawRect(
-                brush = Brush.linearGradient(
-                    colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
-                    start = Offset.Zero,
-                    end = Offset(size.width, size.height)
-                )
-            )
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    val gradientBrush = Brush.linearGradient(
+                        colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
+                        start = Offset.Zero,
+                        end = Offset(size.width, size.height)
+                    )
+                    val step = 72.dp.toPx()
+                    val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
+                    val radialBrush = Brush.radialGradient(
+                        colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = size.width / 2f
+                    )
 
-            // High-tech subtle grid lines
-            val step = 72.dp.toPx()
-            val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
-            var x = 0f
-            while (x < size.width) {
-                drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
-                x += step
-            }
-            var y = 0f
-            while (y < size.height) {
-                drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                y += step
-            }
+                    onDrawBehind {
+                        drawRect(brush = gradientBrush)
 
-            // Radial soft glow in center
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
-                    center = Offset(size.width / 2f, size.height / 2f),
-                    radius = size.width / 2f
-                )
-            )
-        }
+                        var x = 0f
+                        while (x < size.width) {
+                            drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                            x += step
+                        }
+                        var y = 0f
+                        while (y < size.height) {
+                            drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                            y += step
+                        }
+
+                        drawCircle(brush = radialBrush)
+                    }
+                }
+        )
 
         // ==========================================
         // DESKTOP BACKGROUND INTERACTION (Right-Click for Desktop Context Menu)
