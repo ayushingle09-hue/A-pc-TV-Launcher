@@ -21,11 +21,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21 (Required for AGP 9.1 & Gradle 9.3)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Restore Signing Keystore & Environment
         run: |
@@ -34,8 +34,6 @@ jobs:
             echo "Decoding debug.keystore from base64..."
             base64 -d debug.keystore.base64 > debug.keystore
             echo "debug.keystore restored successfully."
-          else
-            echo "debug.keystore.base64 not found."
           fi
 
           # 2. Ensure .env exists so Secrets Gradle Plugin doesn't fail
@@ -44,7 +42,7 @@ jobs:
             cp .env.example .env 2>/dev/null || touch .env
           fi
 
-      - name: Accept Android SDK Licenses
+      - name: Setup Android SDK Licenses
         run: |
           yes | sdkmanager --licenses 2>/dev/null || true
 
@@ -53,9 +51,12 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          if [ -f "./gradlew" ] && [ -f "./gradle/wrapper/gradle-wrapper.jar" ]; then
+          if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew assembleDebug --no-daemon --stacktrace
+            ./gradlew assembleDebug --no-daemon --stacktrace || {
+              echo "Gradlew failed, trying system gradle..."
+              gradle assembleDebug --no-daemon --stacktrace
+            }
           else
             gradle assembleDebug --no-daemon --stacktrace
           fi
@@ -87,7 +88,7 @@ jobs:
           body: |
             ## Desktop TV Launcher - Android TV Release
             
-            This debug build is ready to install on your Android TV, Google TV, Fire TV, or TV Box!
+            This build is ready to install on your Android TV, Google TV, Fire TV, or Android TV Box!
             
             ### Installation Methods:
             1. **Send Files to TV**: Send `DesktopTVLauncher-v1.0.apk` from phone to TV and install using a TV File Manager.
