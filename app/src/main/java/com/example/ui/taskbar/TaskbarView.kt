@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Computer
@@ -85,6 +86,7 @@ fun TaskbarView(
     onOpenTaskManager: () -> Unit,
     onOpenFileExplorer: () -> Unit = onOpenTaskManager,
     onOpenGitHubHub: () -> Unit = {},
+    onOpenScreenCast: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onShowDesktop: () -> Unit,
     modifier: Modifier = Modifier
@@ -131,9 +133,9 @@ fun TaskbarView(
                 )
 
                 QuickLaunchButton(
-                    icon = Icons.Default.CloudDownload,
-                    label = "GitHub",
-                    onClick = onOpenGitHubHub
+                    icon = Icons.Default.Cast,
+                    label = "Screen Cast",
+                    onClick = onOpenScreenCast
                 )
 
                 QuickLaunchButton(
@@ -338,6 +340,7 @@ private fun WindowTaskbarTab(
         WindowType.TERMINAL -> Icons.Default.Terminal
         WindowType.APP_CONTAINER -> Icons.Default.Computer
         WindowType.GITHUB_HUB -> Icons.Default.CloudDownload
+        WindowType.SCREEN_CAST -> Icons.Default.Cast
     }
 
     Row(

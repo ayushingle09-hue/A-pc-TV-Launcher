@@ -306,6 +306,33 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         closeStartMenu()
     }
 
+    fun moveAppToTop(packageName: String) {
+        val current = _installedApps.value.toMutableList()
+        val index = current.indexOfFirst { it.packageName == packageName }
+        if (index > 0) {
+            val item = current.removeAt(index)
+            current.add(0, item)
+            _installedApps.value = current
+        }
+    }
+
+    fun openPlayStore(packageName: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(webIntent)
+            } catch (_: Exception) {}
+        }
+        closeContextMenu()
+    }
+
     fun handleContextMenuAction(action: ContextMenuAction, app: AppInfo?) {
         when (action) {
             ContextMenuAction.LAUNCH -> if (app != null) launchApp(app)
@@ -315,7 +342,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             ContextMenuAction.TOGGLE_PIN -> if (app != null) togglePinApp(app.packageName)
+            ContextMenuAction.MOVE_TO_TOP -> if (app != null) moveAppToTop(app.packageName)
             ContextMenuAction.APP_INFO -> if (app != null) openAppDetails(app.packageName)
+            ContextMenuAction.OPEN_PLAY_STORE -> if (app != null) openPlayStore(app.packageName)
             ContextMenuAction.UNINSTALL -> if (app != null) uninstallApp(app.packageName)
             ContextMenuAction.CHANGE_WALLPAPER -> openWindow(WindowType.DISPLAY_SETTINGS, "Display & Wallpapers")
             ContextMenuAction.OPEN_TASK_MANAGER -> openWindow(WindowType.TASK_MANAGER, "Task Manager")
@@ -324,13 +353,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             ContextMenuAction.OPEN_NOTES -> openWindow(WindowType.QUICK_NOTES, "Quick Notes")
             ContextMenuAction.OPEN_SETTINGS -> openWindow(WindowType.DISPLAY_SETTINGS, "Display & Settings")
             ContextMenuAction.OPEN_GITHUB_HUB -> openWindow(WindowType.GITHUB_HUB, "GitHub Hub & Releases")
+            ContextMenuAction.OPEN_SCREEN_CAST -> openScreenCast()
             ContextMenuAction.REFRESH_DESKTOP -> loadInstalledApps()
+            ContextMenuAction.SORT_AZ -> {
+                _installedApps.value = _installedApps.value.sortedBy { it.label.lowercase(Locale.ROOT) }
+            }
         }
         closeContextMenu()
     }
 
     fun openGitHubHub() {
         openWindow(WindowType.GITHUB_HUB, "GitHub Hub & Releases")
+    }
+
+    fun openScreenCast() {
+        openWindow(WindowType.SCREEN_CAST, "Screen Cast & Wireless Display")
     }
 
     // ==========================================
@@ -365,6 +402,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             WindowType.TERMINAL -> "Terminal Console"
             WindowType.APP_CONTAINER -> "App: $extra"
             WindowType.GITHUB_HUB -> "GitHub Hub & Releases"
+            WindowType.SCREEN_CAST -> "Screen Cast & Wireless Display"
         }
 
         // Offset cascade based on open window count
@@ -380,6 +418,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             WindowType.DISPLAY_SETTINGS -> 700f to 460f
             WindowType.APP_CONTAINER -> 600f to 420f
             WindowType.GITHUB_HUB -> 780f to 500f
+            WindowType.SCREEN_CAST -> 800f to 520f
         }
 
         val newWindow = DesktopWindow(

@@ -60,6 +60,7 @@ import com.example.ui.theme.Slate900
 import com.example.ui.windowing.FileExplorerContent
 import com.example.ui.windowing.GitHubHubContent
 import com.example.ui.windowing.QuickNotesContent
+import com.example.ui.windowing.ScreenCastContent
 import com.example.ui.windowing.SettingsContent
 import com.example.ui.windowing.SimulatedWindowView
 import com.example.ui.windowing.TaskManagerContent
@@ -163,74 +164,6 @@ fun DesktopWorkspace(
                     }
                 }
         ) {
-            // Desktop Header / Quick TV Status Widget
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 18.dp, end = 24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // GitHub Reliance / Releases Hub Quick Card
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Slate900.copy(alpha = 0.8f)),
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.5f)),
-                    modifier = Modifier.clickable { viewModel.openGitHubHub() }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = EmeraldSuccess,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "GitHub Reliance: 0% (Offline-Ready)",
-                            color = EmeraldSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = "Open Hub",
-                            tint = CyanBright,
-                            modifier = Modifier.size(13.dp)
-                        )
-                    }
-                }
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Slate900.copy(alpha = 0.6f)),
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mouse,
-                            contentDescription = null,
-                            tint = CyanBright,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Mouse Navigation Active",
-                            color = Slate400,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
             // Desktop App Icon Grid (Left side, Windows desktop style)
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 96.dp),
@@ -347,6 +280,12 @@ fun DesktopWorkspace(
                         WindowType.GITHUB_HUB -> {
                             GitHubHubContent()
                         }
+                        WindowType.SCREEN_CAST -> {
+                            ScreenCastContent(
+                                installedApps = installedApps,
+                                onLaunchApp = { viewModel.launchApp(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -368,6 +307,7 @@ fun DesktopWorkspace(
             onOpenSettings = { viewModel.openWindow(WindowType.DISPLAY_SETTINGS) },
             onOpenTerminal = { viewModel.openWindow(WindowType.TERMINAL) },
             onOpenGitHubHub = { viewModel.openGitHubHub() },
+            onOpenScreenCast = { viewModel.openScreenCast() },
             onOpenTvSettings = { viewModel.openSystemTvSettings() },
             onReloadApps = { viewModel.loadInstalledApps() }
         )
@@ -399,6 +339,7 @@ fun DesktopWorkspace(
             onOpenTaskManager = { viewModel.openWindow(WindowType.TASK_MANAGER) },
             onOpenFileExplorer = { viewModel.openWindow(WindowType.FILE_EXPLORER) },
             onOpenGitHubHub = { viewModel.openGitHubHub() },
+            onOpenScreenCast = { viewModel.openScreenCast() },
             onOpenSettings = { viewModel.openWindow(WindowType.DISPLAY_SETTINGS) },
             onShowDesktop = {
                 // Minimize all open windows

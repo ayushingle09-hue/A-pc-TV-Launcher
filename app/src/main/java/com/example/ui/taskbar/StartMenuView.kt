@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Folder
@@ -97,6 +98,7 @@ fun StartMenuView(
     onOpenSettings: () -> Unit,
     onOpenTerminal: () -> Unit,
     onOpenGitHubHub: () -> Unit = {},
+    onOpenScreenCast: () -> Unit = {},
     onOpenTvSettings: () -> Unit,
     onReloadApps: () -> Unit
 ) {
@@ -183,10 +185,11 @@ fun StartMenuView(
                 // Quick Tools Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     QuickToolTile(Icons.Default.Monitor, "Task Mgr", onClick = onOpenTaskManager, modifier = Modifier.weight(1f))
                     QuickToolTile(Icons.Default.Folder, "Explorer", onClick = onOpenFileExplorer, modifier = Modifier.weight(1f))
+                    QuickToolTile(Icons.Default.Cast, "Cast", onClick = onOpenScreenCast, modifier = Modifier.weight(1f))
                     QuickToolTile(Icons.Default.Note, "Notes", onClick = onOpenNotes, modifier = Modifier.weight(1f))
                     QuickToolTile(Icons.Default.Terminal, "Terminal", onClick = onOpenTerminal, modifier = Modifier.weight(1f))
                     QuickToolTile(Icons.Default.CloudDownload, "GitHub", onClick = onOpenGitHubHub, modifier = Modifier.weight(1f))

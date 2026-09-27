@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CropSquare
@@ -121,6 +122,7 @@ fun SimulatedWindowView(
         WindowType.TERMINAL -> Icons.Default.Terminal
         WindowType.APP_CONTAINER -> Icons.Default.Web
         WindowType.GITHUB_HUB -> Icons.Default.CloudDownload
+        WindowType.SCREEN_CAST -> Icons.Default.Cast
     }
 
     // Layout dimensions depending on maximized state

@@ -10,7 +10,8 @@ enum class WindowType {
     DISPLAY_SETTINGS,
     TERMINAL,
     APP_CONTAINER,
-    GITHUB_HUB
+    GITHUB_HUB,
+    SCREEN_CAST
 }
 
 /**

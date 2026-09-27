@@ -32,7 +32,9 @@ enum class ContextMenuAction {
     LAUNCH,
     OPEN_SIMULATED_WINDOW,
     TOGGLE_PIN,
+    MOVE_TO_TOP,
     APP_INFO,
+    OPEN_PLAY_STORE,
     UNINSTALL,
     CHANGE_WALLPAPER,
     OPEN_TASK_MANAGER,
@@ -41,5 +43,7 @@ enum class ContextMenuAction {
     OPEN_NOTES,
     OPEN_SETTINGS,
     OPEN_GITHUB_HUB,
-    REFRESH_DESKTOP
+    OPEN_SCREEN_CAST,
+    REFRESH_DESKTOP,
+    SORT_AZ
 }
