@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
@@ -252,12 +251,6 @@ fun DesktopContextMenu(
                         icon = Icons.Default.CloudDownload,
                         label = "GitHub Releases & Audit",
                         onClick = { onAction(ContextMenuAction.OPEN_GITHUB_HUB, null) }
-                    )
-
-                    ContextMenuItem(
-                        icon = Icons.Default.Cast,
-                        label = "Screen Cast & Wireless Display",
-                        onClick = { onAction(ContextMenuAction.OPEN_SCREEN_CAST, null) }
                     )
 
                     HorizontalDivider(color = Slate800, modifier = Modifier.padding(vertical = 4.dp))

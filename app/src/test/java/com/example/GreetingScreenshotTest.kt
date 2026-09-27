@@ -23,9 +23,8 @@ class GreetingScreenshotTest {
   fun greeting_screenshot() {
     composeTestRule.setContent {
       MyApplicationTheme {
-        com.example.ui.hardware.MouseRequiredScreen(
-          onBypassCheck = {},
-          onRefreshScan = {}
+        com.example.ui.splash.BootSplashScreen(
+          onBootComplete = {}
         )
       }
     }

@@ -22,7 +22,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Computer
@@ -61,6 +63,8 @@ import com.example.model.WindowType
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.CyanBright
 import com.example.ui.theme.CyanGlow
+import com.example.ui.theme.RoseDanger
+import com.example.ui.theme.Slate300
 import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate600
 import com.example.ui.theme.Slate700
@@ -86,9 +90,14 @@ fun TaskbarView(
     onOpenTaskManager: () -> Unit,
     onOpenFileExplorer: () -> Unit = onOpenTaskManager,
     onOpenGitHubHub: () -> Unit = {},
-    onOpenScreenCast: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onShowDesktop: () -> Unit,
+    onOpenWifiSettings: () -> Unit = {},
+    onToggleVolumeFlyout: () -> Unit = {},
+    isVolumeFlyoutOpen: Boolean = false,
+    currentVolume: Int = 7,
+    maxVolume: Int = 15,
+    isMuted: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -133,12 +142,6 @@ fun TaskbarView(
                 )
 
                 QuickLaunchButton(
-                    icon = Icons.Default.Cast,
-                    label = "Screen Cast",
-                    onClick = onOpenScreenCast
-                )
-
-                QuickLaunchButton(
                     icon = Icons.Default.Settings,
                     label = "Settings",
                     onClick = onOpenSettings
@@ -169,35 +172,58 @@ fun TaskbarView(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Network Status
+                // Network Status (Click opens TV Wi-Fi settings directly)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClick = onOpenWifiSettings)
                         .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .testTag("taskbar_wifi_button")
                 ) {
                     Icon(
                         imageVector = if (networkStatus == "Offline") Icons.Default.WifiOff else Icons.Default.NetworkWifi,
-                        contentDescription = networkStatus,
+                        contentDescription = "Wi-Fi: $networkStatus (Click to open TV Wi-Fi Settings)",
                         tint = if (networkStatus == "Offline") Slate400 else CyanBright,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = networkStatus,
-                        color = Slate400,
+                        color = if (networkStatus == "Offline") Slate400 else Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Audio Volume Indicator (Click toggles Volume & Sound Control flyout)
+                val volumePercent = if (maxVolume > 0) (currentVolume * 100 / maxVolume) else 0
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClick = onToggleVolumeFlyout)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .testTag("taskbar_sound_button")
+                ) {
+                    Icon(
+                        imageVector = when {
+                            isMuted || currentVolume == 0 -> Icons.AutoMirrored.Filled.VolumeMute
+                            volumePercent < 50 -> Icons.AutoMirrored.Filled.VolumeDown
+                            else -> Icons.AutoMirrored.Filled.VolumeUp
+                        },
+                        contentDescription = "Audio Volume: $volumePercent%",
+                        tint = if (isMuted) RoseDanger else if (isVolumeFlyoutOpen) CyanBright else Slate300,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isMuted) "Mute" else "$volumePercent%",
+                        color = if (isMuted) RoseDanger else Slate300,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
-
-                // Audio Volume Indicator
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Audio",
-                    tint = Slate400,
-                    modifier = Modifier.size(18.dp)
-                )
 
                 // Date & Time Display
                 Column(
@@ -340,7 +366,6 @@ private fun WindowTaskbarTab(
         WindowType.TERMINAL -> Icons.Default.Terminal
         WindowType.APP_CONTAINER -> Icons.Default.Computer
         WindowType.GITHUB_HUB -> Icons.Default.CloudDownload
-        WindowType.SCREEN_CAST -> Icons.Default.Cast
     }
 
     Row(

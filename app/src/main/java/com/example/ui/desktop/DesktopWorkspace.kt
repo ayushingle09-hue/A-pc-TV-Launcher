@@ -33,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -50,6 +52,7 @@ import com.example.model.ContextMenuState
 import com.example.model.WindowType
 import com.example.ui.taskbar.StartMenuView
 import com.example.ui.taskbar.TaskbarView
+import com.example.ui.taskbar.VolumeFlyout
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.CyanBright
 import com.example.ui.theme.EmeraldSuccess
@@ -60,7 +63,6 @@ import com.example.ui.theme.Slate900
 import com.example.ui.windowing.FileExplorerContent
 import com.example.ui.windowing.GitHubHubContent
 import com.example.ui.windowing.QuickNotesContent
-import com.example.ui.windowing.ScreenCastContent
 import com.example.ui.windowing.SettingsContent
 import com.example.ui.windowing.SimulatedWindowView
 import com.example.ui.windowing.TaskManagerContent
@@ -85,6 +87,10 @@ fun DesktopWorkspace(
     val networkStatus by viewModel.networkStatus.collectAsState()
     val systemMetrics by viewModel.systemMetrics.collectAsState()
     val notepadText by viewModel.notepadText.collectAsState()
+    val currentVolume by viewModel.currentVolume.collectAsState()
+    val maxVolume = viewModel.maxVolume
+    val isMuted by viewModel.isMuted.collectAsState()
+    var isVolumeFlyoutOpen by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -98,34 +104,39 @@ fun DesktopWorkspace(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    val gradientBrush = Brush.linearGradient(
-                        colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
-                        start = Offset.Zero,
-                        end = Offset(size.width, size.height)
-                    )
-                    val step = 72.dp.toPx()
-                    val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
-                    val radialBrush = Brush.radialGradient(
-                        colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
-                        center = Offset(size.width / 2f, size.height / 2f),
-                        radius = size.width / 2f
-                    )
+                    if (size.width <= 0f || size.height <= 0f) {
+                        onDrawBehind { }
+                    } else {
+                        val gradientBrush = Brush.linearGradient(
+                            colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
+                            start = Offset.Zero,
+                            end = Offset(size.width, size.height)
+                        )
+                        val step = 72.dp.toPx().coerceAtLeast(20f)
+                        val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
+                        val safeRadius = (size.width / 2f).coerceAtLeast(1f)
+                        val radialBrush = Brush.radialGradient(
+                            colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            radius = safeRadius
+                        )
 
-                    onDrawBehind {
-                        drawRect(brush = gradientBrush)
+                        onDrawBehind {
+                            drawRect(brush = gradientBrush)
 
-                        var x = 0f
-                        while (x < size.width) {
-                            drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
-                            x += step
+                            var x = 0f
+                            while (x < size.width) {
+                                drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                                x += step
+                            }
+                            var y = 0f
+                            while (y < size.height) {
+                                drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                                y += step
+                            }
+
+                            drawCircle(brush = radialBrush)
                         }
-                        var y = 0f
-                        while (y < size.height) {
-                            drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                            y += step
-                        }
-
-                        drawCircle(brush = radialBrush)
                     }
                 }
         )
@@ -155,9 +166,10 @@ fun DesktopWorkspace(
                                         )
                                     )
                                 } else if (change?.pressed == true) {
-                                    // Clicking empty desktop closes Start Menu and Context Menu
+                                    // Clicking empty desktop closes Start Menu, Context Menu, and Volume Flyout
                                     if (isStartMenuOpen) viewModel.closeStartMenu()
                                     if (contextMenuState.isVisible) viewModel.closeContextMenu()
+                                    if (isVolumeFlyoutOpen) isVolumeFlyoutOpen = false
                                 }
                             }
                         }
@@ -280,12 +292,6 @@ fun DesktopWorkspace(
                         WindowType.GITHUB_HUB -> {
                             GitHubHubContent()
                         }
-                        WindowType.SCREEN_CAST -> {
-                            ScreenCastContent(
-                                installedApps = installedApps,
-                                onLaunchApp = { viewModel.launchApp(it) }
-                            )
-                        }
                     }
                 }
             }
@@ -307,7 +313,6 @@ fun DesktopWorkspace(
             onOpenSettings = { viewModel.openWindow(WindowType.DISPLAY_SETTINGS) },
             onOpenTerminal = { viewModel.openWindow(WindowType.TERMINAL) },
             onOpenGitHubHub = { viewModel.openGitHubHub() },
-            onOpenScreenCast = { viewModel.openScreenCast() },
             onOpenTvSettings = { viewModel.openSystemTvSettings() },
             onReloadApps = { viewModel.loadInstalledApps() }
         )
@@ -339,13 +344,35 @@ fun DesktopWorkspace(
             onOpenTaskManager = { viewModel.openWindow(WindowType.TASK_MANAGER) },
             onOpenFileExplorer = { viewModel.openWindow(WindowType.FILE_EXPLORER) },
             onOpenGitHubHub = { viewModel.openGitHubHub() },
-            onOpenScreenCast = { viewModel.openScreenCast() },
             onOpenSettings = { viewModel.openWindow(WindowType.DISPLAY_SETTINGS) },
             onShowDesktop = {
                 // Minimize all open windows
                 openWindows.forEach { viewModel.minimizeWindow(it.id) }
             },
+            onOpenWifiSettings = { viewModel.openWifiSettings() },
+            onToggleVolumeFlyout = { isVolumeFlyoutOpen = !isVolumeFlyoutOpen },
+            isVolumeFlyoutOpen = isVolumeFlyoutOpen,
+            currentVolume = currentVolume,
+            maxVolume = maxVolume,
+            isMuted = isMuted,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+
+        // ==========================================
+        // FLOATING VOLUME & AUDIO CONTROL FLYOUT
+        // ==========================================
+        VolumeFlyout(
+            isOpen = isVolumeFlyoutOpen,
+            onDismiss = { isVolumeFlyoutOpen = false },
+            currentVolume = currentVolume,
+            maxVolume = maxVolume,
+            isMuted = isMuted,
+            onVolumeChange = { viewModel.setVolume(it) },
+            onToggleMute = { viewModel.toggleMute() },
+            onOpenSoundSettings = { viewModel.openSoundSettings() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 60.dp, end = 68.dp)
         )
     }
 }

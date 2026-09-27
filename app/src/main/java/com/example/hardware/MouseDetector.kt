@@ -24,13 +24,13 @@ class MouseDetector(private val context: Context) : InputManager.InputDeviceList
     private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as? InputManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val _isMouseConnected = MutableStateFlow(false)
+    private val _isMouseConnected = MutableStateFlow(true)
     val isMouseConnected: StateFlow<Boolean> = _isMouseConnected.asStateFlow()
 
     private val _connectedMice = MutableStateFlow<List<ConnectedMouseInfo>>(emptyList())
     val connectedMice: StateFlow<List<ConnectedMouseInfo>> = _connectedMice.asStateFlow()
 
-    private val _isBypassed = MutableStateFlow(false)
+    private val _isBypassed = MutableStateFlow(true)
     val isBypassed: StateFlow<Boolean> = _isBypassed.asStateFlow()
 
     fun startListening() {

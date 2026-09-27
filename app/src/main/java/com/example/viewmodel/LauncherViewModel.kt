@@ -2,9 +2,11 @@ package com.example.viewmodel
 
 import android.app.ActivityManager
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -56,7 +58,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // Boot splash sequence
-    private val _isBootCompleted = MutableStateFlow(false)
+    private val _isBootCompleted = MutableStateFlow(true)
     val isBootCompleted: StateFlow<Boolean> = _isBootCompleted.asStateFlow()
 
     // Apps state
@@ -115,6 +117,134 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     // Network status
     private val _networkStatus = MutableStateFlow("Wi-Fi")
     val networkStatus: StateFlow<String> = _networkStatus.asStateFlow()
+
+    // Audio & Volume controls with safe fallbacks
+    private val audioManager: AudioManager? = try {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    } catch (_: Exception) {
+        null
+    }
+
+    val maxVolume: Int = try {
+        audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC)?.coerceAtLeast(1) ?: 15
+    } catch (_: Exception) {
+        15
+    }
+
+    private val _currentVolume = MutableStateFlow(
+        try {
+            audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 7
+        } catch (_: Exception) {
+            7
+        }
+    )
+    val currentVolume: StateFlow<Int> = _currentVolume.asStateFlow()
+
+    private val _isMuted = MutableStateFlow(
+        try {
+            audioManager?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    it.isStreamMute(AudioManager.STREAM_MUSIC)
+                } else {
+                    it.getStreamVolume(AudioManager.STREAM_MUSIC) == 0
+                }
+            } ?: false
+        } catch (_: Exception) {
+            false
+        }
+    )
+    val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
+
+    fun setVolume(volume: Int) {
+        try {
+            val clamped = volume.coerceIn(0, maxVolume)
+            audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, clamped, AudioManager.FLAG_SHOW_UI)
+            _currentVolume.value = clamped
+            _isMuted.value = (clamped == 0)
+        } catch (_: Exception) {}
+    }
+
+    fun toggleMute() {
+        try {
+            if (_isMuted.value) {
+                val restoreVol = if (_currentVolume.value > 0) _currentVolume.value else (maxVolume / 2).coerceAtLeast(1)
+                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, restoreVol, AudioManager.FLAG_SHOW_UI)
+                _currentVolume.value = restoreVol
+                _isMuted.value = false
+            } else {
+                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
+                _isMuted.value = true
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun openWifiSettings() {
+        val wifiIntents = listOf(
+            // Android TV Network & Connectivity Settings Activity
+            Intent().apply {
+                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.connectivity.NetworkActivity")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Standard Android Wi-Fi Settings
+            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Wireless Settings
+            Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Network provider settings (Android 12+)
+            Intent("android.settings.NETWORK_PROVIDER_SETTINGS").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // TV Main Settings fallback
+            Intent().apply {
+                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Standard Settings fallback
+            Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+
+        for (intent in wifiIntents) {
+            try {
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun openSoundSettings() {
+        val soundIntents = listOf(
+            // Standard Android Sound Settings
+            Intent(Settings.ACTION_SOUND_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Android TV Sound Settings
+            Intent().apply {
+                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // TV Main Settings fallback
+            Intent().apply {
+                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Standard Settings fallback
+            Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+
+        for (intent in soundIntents) {
+            try {
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
+    }
 
     // System metrics for Task Manager
     private val _systemMetrics = MutableStateFlow(SystemMetricInfo())
@@ -201,44 +331,58 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
-            val pm = context.packageManager
-            val myPackageName = context.packageName
+            try {
+                val pm = context.packageManager
+                val myPackageName = context.packageName
 
-            val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-            val leanbackIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-            }
+                val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                val leanbackIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                }
 
-            val standardApps = pm.queryIntentActivities(launcherIntent, 0)
-            val tvApps = pm.queryIntentActivities(leanbackIntent, 0)
+                val standardApps = try {
+                    pm.queryIntentActivities(launcherIntent, 0)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                val tvApps = try {
+                    pm.queryIntentActivities(leanbackIntent, 0)
+                } catch (_: Exception) {
+                    emptyList()
+                }
 
-            val combined = (standardApps + tvApps).distinctBy { it.activityInfo.packageName }
+                val combined = (standardApps + tvApps).distinctBy { it.activityInfo.packageName }
 
-            val appList = combined.mapNotNull { resolveInfo ->
-                val pName = resolveInfo.activityInfo.packageName
-                if (pName == myPackageName) return@mapNotNull null
+                val appList = combined.mapNotNull { resolveInfo ->
+                    try {
+                        val pName = resolveInfo.activityInfo.packageName
+                        if (pName == myPackageName) return@mapNotNull null
 
-                val label = resolveInfo.loadLabel(pm).toString()
-                val icon = resolveInfo.loadIcon(pm)
-                val iconBmp = drawableToImageBitmap(icon)
-                val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and
-                        android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                        val label = resolveInfo.loadLabel(pm).toString()
+                        val icon = try { resolveInfo.loadIcon(pm) } catch (_: Exception) { null }
+                        val iconBmp = drawableToImageBitmap(icon)
+                        val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and
+                                android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
-                AppInfo(
-                    label = label,
-                    packageName = pName,
-                    activityName = resolveInfo.activityInfo.name,
-                    icon = icon,
-                    iconBitmap = iconBmp,
-                    isSystemApp = isSystem
-                )
-            }.sortedBy { it.label.lowercase(Locale.ROOT) }
+                        AppInfo(
+                            label = label,
+                            packageName = pName,
+                            activityName = resolveInfo.activityInfo.name,
+                            icon = icon,
+                            iconBitmap = iconBmp,
+                            isSystemApp = isSystem
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+                }.sortedBy { it.label.lowercase(Locale.ROOT) }
 
-            withContext(Dispatchers.Main) {
-                _installedApps.value = appList
-            }
+                withContext(Dispatchers.Main) {
+                    _installedApps.value = appList
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -353,7 +497,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             ContextMenuAction.OPEN_NOTES -> openWindow(WindowType.QUICK_NOTES, "Quick Notes")
             ContextMenuAction.OPEN_SETTINGS -> openWindow(WindowType.DISPLAY_SETTINGS, "Display & Settings")
             ContextMenuAction.OPEN_GITHUB_HUB -> openWindow(WindowType.GITHUB_HUB, "GitHub Hub & Releases")
-            ContextMenuAction.OPEN_SCREEN_CAST -> openScreenCast()
             ContextMenuAction.REFRESH_DESKTOP -> loadInstalledApps()
             ContextMenuAction.SORT_AZ -> {
                 _installedApps.value = _installedApps.value.sortedBy { it.label.lowercase(Locale.ROOT) }
@@ -364,10 +507,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun openGitHubHub() {
         openWindow(WindowType.GITHUB_HUB, "GitHub Hub & Releases")
-    }
-
-    fun openScreenCast() {
-        openWindow(WindowType.SCREEN_CAST, "Screen Cast & Wireless Display")
     }
 
     // ==========================================
@@ -402,7 +541,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             WindowType.TERMINAL -> "Terminal Console"
             WindowType.APP_CONTAINER -> "App: $extra"
             WindowType.GITHUB_HUB -> "GitHub Hub & Releases"
-            WindowType.SCREEN_CAST -> "Screen Cast & Wireless Display"
         }
 
         // Offset cascade based on open window count
@@ -418,7 +556,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             WindowType.DISPLAY_SETTINGS -> 700f to 460f
             WindowType.APP_CONTAINER -> 600f to 420f
             WindowType.GITHUB_HUB -> 780f to 500f
-            WindowType.SCREEN_CAST -> 800f to 520f
         }
 
         val newWindow = DesktopWindow(
@@ -578,21 +715,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch(Dispatchers.Default) {
             var counter = 0
             while (true) {
-                val now = Date()
-                val newTime = timeFormat.format(now)
-                if (_currentTime.value != newTime) {
-                    _currentTime.value = newTime
-                }
-                val newDate = dateFormat.format(now)
-                if (_currentDate.value != newDate) {
-                    _currentDate.value = newDate
-                }
+                try {
+                    val now = Date()
+                    val newTime = timeFormat.format(now)
+                    if (_currentTime.value != newTime) {
+                        _currentTime.value = newTime
+                    }
+                    val newDate = dateFormat.format(now)
+                    if (_currentDate.value != newDate) {
+                        _currentDate.value = newDate
+                    }
 
-                // Poll network and system metrics every 5 seconds to reduce CPU churn on Android 9 TV
-                if (counter % 5 == 0) {
-                    checkNetwork()
-                    checkSystemMetrics()
-                }
+                    // Poll network and system metrics every 5 seconds to reduce CPU churn on Android 9 TV
+                    if (counter % 5 == 0) {
+                        checkNetwork()
+                        checkSystemMetrics()
+                    }
+                } catch (_: Exception) {}
 
                 counter++
                 delay(1000)
@@ -601,17 +740,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun checkNetwork() {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val activeNetwork = cm?.activeNetwork
-        val caps = cm?.getNetworkCapabilities(activeNetwork)
-        val status = when {
-            caps == null -> "Offline"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular"
-            else -> "Connected"
+        try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val activeNetwork = cm?.activeNetwork
+            val caps = cm?.getNetworkCapabilities(activeNetwork)
+            val status = when {
+                caps == null -> "Offline"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular"
+                else -> "Connected"
+            }
+            _networkStatus.value = status
+        } catch (_: Exception) {
+            _networkStatus.value = "Wi-Fi"
         }
-        _networkStatus.value = status
     }
 
     private fun checkSystemMetrics() {

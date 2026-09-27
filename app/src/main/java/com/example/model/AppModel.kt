@@ -43,7 +43,6 @@ enum class ContextMenuAction {
     OPEN_NOTES,
     OPEN_SETTINGS,
     OPEN_GITHUB_HUB,
-    OPEN_SCREEN_CAST,
     REFRESH_DESKTOP,
     SORT_AZ
 }
