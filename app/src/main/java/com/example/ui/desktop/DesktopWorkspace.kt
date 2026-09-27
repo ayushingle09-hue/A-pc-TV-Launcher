@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ContextMenuState
 import com.example.model.WindowType
+import com.example.ui.taskbar.NetworkFlyout
 import com.example.ui.taskbar.StartMenuView
 import com.example.ui.taskbar.TaskbarView
 import com.example.ui.taskbar.VolumeFlyout
@@ -91,6 +92,7 @@ fun DesktopWorkspace(
     val maxVolume = viewModel.maxVolume
     val isMuted by viewModel.isMuted.collectAsState()
     var isVolumeFlyoutOpen by remember { mutableStateOf(false) }
+    var isWifiFlyoutOpen by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -104,39 +106,34 @@ fun DesktopWorkspace(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    if (size.width <= 0f || size.height <= 0f) {
-                        onDrawBehind { }
-                    } else {
-                        val gradientBrush = Brush.linearGradient(
-                            colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
-                            start = Offset.Zero,
-                            end = Offset(size.width, size.height)
-                        )
-                        val step = 72.dp.toPx().coerceAtLeast(20f)
-                        val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
-                        val safeRadius = (size.width / 2f).coerceAtLeast(1f)
-                        val radialBrush = Brush.radialGradient(
-                            colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
-                            center = Offset(size.width / 2f, size.height / 2f),
-                            radius = safeRadius
-                        )
+                    val gradientBrush = Brush.linearGradient(
+                        colors = listOf(wallpaper.startColor, wallpaper.centerColor, wallpaper.endColor),
+                        start = Offset.Zero,
+                        end = Offset(size.width, size.height)
+                    )
+                    val step = 72.dp.toPx()
+                    val gridColor = wallpaper.accentGlow.copy(alpha = 0.04f)
+                    val radialBrush = Brush.radialGradient(
+                        colors = listOf(wallpaper.accentGlow.copy(alpha = 0.08f), Color.Transparent),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = size.width / 2f
+                    )
 
-                        onDrawBehind {
-                            drawRect(brush = gradientBrush)
+                    onDrawBehind {
+                        drawRect(brush = gradientBrush)
 
-                            var x = 0f
-                            while (x < size.width) {
-                                drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
-                                x += step
-                            }
-                            var y = 0f
-                            while (y < size.height) {
-                                drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                                y += step
-                            }
-
-                            drawCircle(brush = radialBrush)
+                        var x = 0f
+                        while (x < size.width) {
+                            drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                            x += step
                         }
+                        var y = 0f
+                        while (y < size.height) {
+                            drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                            y += step
+                        }
+
+                        drawCircle(brush = radialBrush)
                     }
                 }
         )
@@ -166,10 +163,11 @@ fun DesktopWorkspace(
                                         )
                                     )
                                 } else if (change?.pressed == true) {
-                                    // Clicking empty desktop closes Start Menu, Context Menu, and Volume Flyout
+                                    // Clicking empty desktop closes Start Menu, Context Menu, and Flyouts
                                     if (isStartMenuOpen) viewModel.closeStartMenu()
                                     if (contextMenuState.isVisible) viewModel.closeContextMenu()
                                     if (isVolumeFlyoutOpen) isVolumeFlyoutOpen = false
+                                    if (isWifiFlyoutOpen) isWifiFlyoutOpen = false
                                 }
                             }
                         }
@@ -349,13 +347,35 @@ fun DesktopWorkspace(
                 // Minimize all open windows
                 openWindows.forEach { viewModel.minimizeWindow(it.id) }
             },
-            onOpenWifiSettings = { viewModel.openWifiSettings() },
-            onToggleVolumeFlyout = { isVolumeFlyoutOpen = !isVolumeFlyoutOpen },
+            onOpenWifiSettings = {
+                isWifiFlyoutOpen = !isWifiFlyoutOpen
+                isVolumeFlyoutOpen = false
+                viewModel.openWifiSettings()
+            },
+            onToggleVolumeFlyout = {
+                isVolumeFlyoutOpen = !isVolumeFlyoutOpen
+                isWifiFlyoutOpen = false
+            },
             isVolumeFlyoutOpen = isVolumeFlyoutOpen,
+            isWifiFlyoutOpen = isWifiFlyoutOpen,
             currentVolume = currentVolume,
             maxVolume = maxVolume,
             isMuted = isMuted,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+
+        // ==========================================
+        // FLOATING NETWORK & WI-FI CONTROL FLYOUT
+        // ==========================================
+        NetworkFlyout(
+            isOpen = isWifiFlyoutOpen,
+            onDismiss = { isWifiFlyoutOpen = false },
+            networkStatus = networkStatus,
+            onOpenWifiSettings = { viewModel.openWifiSettings() },
+            onOpenMainSettings = { viewModel.openWindow(WindowType.DISPLAY_SETTINGS) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 60.dp, end = 120.dp)
         )
 
         // ==========================================

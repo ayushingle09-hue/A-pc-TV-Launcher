@@ -179,34 +179,84 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun openWifiSettings() {
-        val wifiIntents = listOf(
-            // Android TV Network & Connectivity Settings Activity
-            Intent().apply {
-                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.connectivity.NetworkActivity")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Standard Android Wi-Fi Settings
-            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Wireless Settings
-            Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Network provider settings (Android 12+)
-            Intent("android.settings.NETWORK_PROVIDER_SETTINGS").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // TV Main Settings fallback
-            Intent().apply {
-                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Standard Settings fallback
-            Intent(Settings.ACTION_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+        val wifiIntents = mutableListOf<Intent>()
+
+        // 1. Google TV & Android TV specific Network Activities
+        val tvPackages = listOf(
+            "com.google.android.tv.settings",
+            "com.android.tv.settings",
+            "com.amazon.tv.settings",
+            "com.xiaomi.mitv.settings",
+            "com.tcl.tv.settings"
         )
+        val tvActivities = listOf(
+            "com.google.android.tv.settings.connectivity.NetworkActivity",
+            "com.android.tv.settings.connectivity.NetworkActivity",
+            "com.android.tv.settings.network.NetworkActivity",
+            "com.android.tv.settings.device.connectivity.NetworkActivity",
+            "com.google.android.tv.settings.MainSettings",
+            "com.android.tv.settings.MainSettings"
+        )
+
+        for (pkg in tvPackages) {
+            for (cls in tvActivities) {
+                wifiIntents.add(Intent().apply {
+                    component = ComponentName(pkg, cls)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                })
+            }
+        }
+
+        // 2. Action based Wi-Fi & Network intents
+        wifiIntents.addAll(listOf(
+            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent("android.settings.panel.action.INTERNET_CONNECTIVITY").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent("android.settings.panel.action.WIFI").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent("android.settings.NETWORK_PROVIDER_SETTINGS").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent("com.android.tv.settings.action.NETWORK").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent("com.google.android.tv.settings.action.NETWORK").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                addCategory("android.intent.category.LEANBACK_SETTINGS")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_SETTINGS).apply {
+                addCategory("android.intent.category.LEANBACK_SETTINGS")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        ))
+
+        // 3. Package launcher intents fallback
+        for (pkg in tvPackages) {
+            try {
+                context.packageManager.getLaunchIntentForPackage(pkg)?.let {
+                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    wifiIntents.add(it)
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 4. General Settings fallback
+        wifiIntents.add(Intent(Settings.ACTION_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        })
 
         for (intent in wifiIntents) {
             try {
@@ -214,29 +264,50 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 return
             } catch (_: Exception) {}
         }
+
+        try {
+            android.widget.Toast.makeText(context, "Wi-Fi: " + _networkStatus.value, android.widget.Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {}
     }
 
     fun openSoundSettings() {
-        val soundIntents = listOf(
-            // Standard Android Sound Settings
-            Intent(Settings.ACTION_SOUND_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Android TV Sound Settings
-            Intent().apply {
-                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // TV Main Settings fallback
-            Intent().apply {
-                component = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            // Standard Settings fallback
-            Intent(Settings.ACTION_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+        val soundIntents = mutableListOf<Intent>()
+
+        val tvPackages = listOf(
+            "com.google.android.tv.settings",
+            "com.android.tv.settings",
+            "com.amazon.tv.settings",
+            "com.xiaomi.mitv.settings"
         )
+        val soundActivities = listOf(
+            "com.android.tv.settings.device.sound.SoundActivity",
+            "com.google.android.tv.settings.device.sound.SoundActivity",
+            "com.android.tv.settings.sound.SoundActivity",
+            "com.android.tv.settings.MainSettings",
+            "com.google.android.tv.settings.MainSettings"
+        )
+
+        for (pkg in tvPackages) {
+            for (cls in soundActivities) {
+                soundIntents.add(Intent().apply {
+                    component = ComponentName(pkg, cls)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                })
+            }
+        }
+
+        soundIntents.addAll(listOf(
+            Intent(Settings.ACTION_SOUND_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_SOUND_SETTINGS).apply {
+                addCategory("android.intent.category.LEANBACK_SETTINGS")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+            Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        ))
 
         for (intent in soundIntents) {
             try {
@@ -331,58 +402,44 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val pm = context.packageManager
-                val myPackageName = context.packageName
+            val pm = context.packageManager
+            val myPackageName = context.packageName
 
-                val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                }
-                val leanbackIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                }
+            val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val leanbackIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+            }
 
-                val standardApps = try {
-                    pm.queryIntentActivities(launcherIntent, 0)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-                val tvApps = try {
-                    pm.queryIntentActivities(leanbackIntent, 0)
-                } catch (_: Exception) {
-                    emptyList()
-                }
+            val standardApps = pm.queryIntentActivities(launcherIntent, 0)
+            val tvApps = pm.queryIntentActivities(leanbackIntent, 0)
 
-                val combined = (standardApps + tvApps).distinctBy { it.activityInfo.packageName }
+            val combined = (standardApps + tvApps).distinctBy { it.activityInfo.packageName }
 
-                val appList = combined.mapNotNull { resolveInfo ->
-                    try {
-                        val pName = resolveInfo.activityInfo.packageName
-                        if (pName == myPackageName) return@mapNotNull null
+            val appList = combined.mapNotNull { resolveInfo ->
+                val pName = resolveInfo.activityInfo.packageName
+                if (pName == myPackageName) return@mapNotNull null
 
-                        val label = resolveInfo.loadLabel(pm).toString()
-                        val icon = try { resolveInfo.loadIcon(pm) } catch (_: Exception) { null }
-                        val iconBmp = drawableToImageBitmap(icon)
-                        val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and
-                                android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                val label = resolveInfo.loadLabel(pm).toString()
+                val icon = resolveInfo.loadIcon(pm)
+                val iconBmp = drawableToImageBitmap(icon)
+                val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and
+                        android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
-                        AppInfo(
-                            label = label,
-                            packageName = pName,
-                            activityName = resolveInfo.activityInfo.name,
-                            icon = icon,
-                            iconBitmap = iconBmp,
-                            isSystemApp = isSystem
-                        )
-                    } catch (_: Exception) {
-                        null
-                    }
-                }.sortedBy { it.label.lowercase(Locale.ROOT) }
+                AppInfo(
+                    label = label,
+                    packageName = pName,
+                    activityName = resolveInfo.activityInfo.name,
+                    icon = icon,
+                    iconBitmap = iconBmp,
+                    isSystemApp = isSystem
+                )
+            }.sortedBy { it.label.lowercase(Locale.ROOT) }
 
-                withContext(Dispatchers.Main) {
-                    _installedApps.value = appList
-                }
-            } catch (_: Exception) {}
+            withContext(Dispatchers.Main) {
+                _installedApps.value = appList
+            }
         }
     }
 
@@ -715,23 +772,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch(Dispatchers.Default) {
             var counter = 0
             while (true) {
-                try {
-                    val now = Date()
-                    val newTime = timeFormat.format(now)
-                    if (_currentTime.value != newTime) {
-                        _currentTime.value = newTime
-                    }
-                    val newDate = dateFormat.format(now)
-                    if (_currentDate.value != newDate) {
-                        _currentDate.value = newDate
-                    }
+                val now = Date()
+                val newTime = timeFormat.format(now)
+                if (_currentTime.value != newTime) {
+                    _currentTime.value = newTime
+                }
+                val newDate = dateFormat.format(now)
+                if (_currentDate.value != newDate) {
+                    _currentDate.value = newDate
+                }
 
-                    // Poll network and system metrics every 5 seconds to reduce CPU churn on Android 9 TV
-                    if (counter % 5 == 0) {
-                        checkNetwork()
-                        checkSystemMetrics()
-                    }
-                } catch (_: Exception) {}
+                // Poll network and system metrics every 5 seconds to reduce CPU churn on Android 9 TV
+                if (counter % 5 == 0) {
+                    checkNetwork()
+                    checkSystemMetrics()
+                }
 
                 counter++
                 delay(1000)
@@ -740,21 +795,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun checkNetwork() {
-        try {
-            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            val activeNetwork = cm?.activeNetwork
-            val caps = cm?.getNetworkCapabilities(activeNetwork)
-            val status = when {
-                caps == null -> "Offline"
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular"
-                else -> "Connected"
-            }
-            _networkStatus.value = status
-        } catch (_: Exception) {
-            _networkStatus.value = "Wi-Fi"
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val activeNetwork = cm?.activeNetwork
+        val caps = cm?.getNetworkCapabilities(activeNetwork)
+        val status = when {
+            caps == null -> "Offline"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular"
+            else -> "Connected"
         }
+        _networkStatus.value = status
     }
 
     private fun checkSystemMetrics() {

@@ -95,6 +95,7 @@ fun TaskbarView(
     onOpenWifiSettings: () -> Unit = {},
     onToggleVolumeFlyout: () -> Unit = {},
     isVolumeFlyoutOpen: Boolean = false,
+    isWifiFlyoutOpen: Boolean = false,
     currentVolume: Int = 7,
     maxVolume: Int = 15,
     isMuted: Boolean = false,
@@ -178,16 +179,16 @@ fun TaskbarView(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .clickable(onClick = onOpenWifiSettings)
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
                         .testTag("taskbar_wifi_button")
                 ) {
                     Icon(
                         imageVector = if (networkStatus == "Offline") Icons.Default.WifiOff else Icons.Default.NetworkWifi,
                         contentDescription = "Wi-Fi: $networkStatus (Click to open TV Wi-Fi Settings)",
                         tint = if (networkStatus == "Offline") Slate400 else CyanBright,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = networkStatus,
                         color = if (networkStatus == "Offline") Slate400 else Color.White,
@@ -203,7 +204,7 @@ fun TaskbarView(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .clickable(onClick = onToggleVolumeFlyout)
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
                         .testTag("taskbar_sound_button")
                 ) {
                     Icon(
@@ -214,9 +215,9 @@ fun TaskbarView(
                         },
                         contentDescription = "Audio Volume: $volumePercent%",
                         tint = if (isMuted) RoseDanger else if (isVolumeFlyoutOpen) CyanBright else Slate300,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = if (isMuted) "Mute" else "$volumePercent%",
                         color = if (isMuted) RoseDanger else Slate300,
